@@ -38,8 +38,7 @@ The model summary can be found in `model_summary.txt`, which provides detailed i
 The training process involves:
 - Loading the dataset using `keras.utils.image_dataset_from_directory`.
 - Applying transformations such as resizing, normalization, and data augmentation.
-- Using the CrossEntropyLoss criterion and SGD optimizer.
-- Training the model for a specified number of epochs.
+- Training the model for 10 epochs.
 
 The training loop includes validation after each epoch to monitor performance.
 
