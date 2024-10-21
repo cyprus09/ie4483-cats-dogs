@@ -1,6 +1,6 @@
 # VGG16 Image Classification
 
-This project implements a VGG19 model for binary image classification, specifically for distinguishing between cats and dogs. The model is trained using PyTorch and includes data preprocessing, model definition, training, and evaluation.
+This project implements a VGG16 model for binary image classification, specifically for distinguishing between cats and dogs. The model is trained using Tensorflow and includes data preprocessing, model definition, training.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ This project implements a VGG19 model for binary image classification, specifica
 
 ## Introduction
 
-The VGG19 model is a convolutional neural network that has shown great success in image classification tasks. This implementation focuses on binary classification, utilizing transfer learning techniques to achieve high accuracy.
+The VGG16 model is a convolutional neural network that has shown great success in image classification tasks. This implementation focuses on binary classification, utilizing transfer learning techniques to achieve high accuracy.
 
 ## Dataset
 The dataset used for training and validation is organized into two directories:
@@ -49,7 +49,7 @@ The training and validation loss and accuracy are visualized in the following pl
 
 ![VGG16 Loss and Accuracy](vgg16_op.png)
 
-The model achieved a validation accuracy of approximately 76.80% after the first epoch.
+The model achieved train_accuracy: 0.9613 - train_loss: 0.0981 - val_accuracy: 0.9870 - val_loss: 0.035 at 10th epoch.
 
 ## Submission
 
