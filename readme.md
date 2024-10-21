@@ -1,4 +1,4 @@
-# VGG19 Image Classification
+# VGG16 Image Classification
 
 This project implements a VGG19 model for binary image classification, specifically for distinguishing between cats and dogs. The model is trained using PyTorch and includes data preprocessing, model definition, training, and evaluation.
 
