@@ -46,7 +46,7 @@ The training loop includes validation after each epoch to monitor performance.
 
 The training and validation loss and accuracy are visualized in the following plots:
 
-![VGG16 Loss and Accuracy](vgg16_op.png)
+![VGG16 Loss and Accuracy](img/vgg16_3.png)
 
 The model achieved train_accuracy: 0.9613 - train_loss: 0.0981 - val_accuracy: 0.9870 - val_loss: 0.035 at 10th epoch.
 
