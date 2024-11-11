@@ -19,4 +19,4 @@ class UnlabeledImageDataset(Dataset):
         if self.transform:
             image = self.transform(image)
             
-        return image, img_namex
+        return image, img_name

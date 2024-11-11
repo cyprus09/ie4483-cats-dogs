@@ -6,60 +6,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.distributed as dist
+import torch.utils.model_zoo as model_zoo
 
-from torch.utils.data import DataLoader
-from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torchvision import datasets, transforms
 
 from utils import load_config, ExperimentTracker
-from model import AlexNet
-from dataset import UnlabeledImageDataset
-
-
-def get_data_loaders(config, world_size, rank):
-    train_transform = transforms.Compose([
-        transforms.Resize((227, 227)),
-        transforms.RandomRotation(15),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    val_transform = transforms.Compose([
-        transforms.Resize((227, 227)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    train_dataset = datasets.ImageFolder(config['data']['train_dir'], transform=train_transform)
-    val_dataset = datasets.ImageFolder(config['data']['val_dir'], transform=val_transform)
-    test_dataset = UnlabeledImageDataset(config['data']['test_dir'], transform=val_transform)
-    
-    train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank)
-
-    val_sampler = DistributedSampler(val_dataset, num_replicas=world_size, rank=rank)
-
-    train_loader = DataLoader(train_dataset,
-                                batch_size=config['training']['batch_size'],
-                                sampler=train_sampler,
-                                num_workers=int(os.environ["SLURM_CPUS_PER_TASK"]),
-                                pin_memory=True)
-    val_loader = DataLoader(val_dataset,
-                            batch_size=config['training']['batch_size'],
-                            sampler=val_sampler,
-                            num_workers=int(os.environ["SLURM_CPUS_PER_TASK"]),
-                            pin_memory=True)
-
-    test_loader = DataLoader(
-        test_dataset, 
-        batch_size=config['training']['batch_size'], 
-        shuffle=False, 
-        num_workers=config['data']['num_workers']
-    )
-    
-    return train_loader, val_loader, test_loader, train_dataset.classes
+from model import AlexNet, VGG16, AlexNetPretrained, VGG16Pretrained
+from dataloader import get_data_loaders
 
 def train_model(model, train_loader, val_loader, config, device, tracker):
     criterion = nn.CrossEntropyLoss()
@@ -141,21 +94,45 @@ def train_model(model, train_loader, val_loader, config, device, tracker):
     tracker.save_confusion_matrix(val_targets, val_predictions, train_loader.dataset.classes)
     return train_losses, train_accuracies, val_losses, val_accuracies
 
+def get_model(config):
+    model_name = config['model'].get('name')
+    is_pretrained = config['model'].get('is_pretrained')
+
+    assert model_name in ['alexnet', 'vgg16'], f"Model should be either one {['alexnet', 'vgg16']}"
+    if model_name == 'alexnet':
+        if is_pretrained:
+            model = AlexNetPretrained(num_classes=config['model'].get('num_classes'))
+        else:
+            model = AlexNet(num_classes=config['model'].get('num_classes'))
+
+    if model_name == 'vgg16':
+        if is_pretrained:
+            model = VGG16(num_classes=config['model'].get('num_classes'))
+        else:
+            model = VGG16Pretrained(num_classes=config['model'].get('num_classes'))
+
+    return model
+
 def main():
     # Load config
     config = load_config('config.yaml')
 
-    world_size    = int(os.environ["WORLD_SIZE"])
-    rank          = int(os.environ["SLURM_PROCID"])
+    # Setup distributed training on multinode & multi-GPU
+    world_size = int(os.environ["WORLD_SIZE"])
+    rank = int(os.environ["SLURM_PROCID"])
     gpus_per_node = int(os.environ["SLURM_GPUS_ON_NODE"])
     assert gpus_per_node == torch.cuda.device_count()
+    
     print(f"Hello from rank {rank} of {world_size} on {gethostname()} where there are" \
-            f" {gpus_per_node} allocated GPUs per node.", flush=True)
+          f" {gpus_per_node} allocated GPUs per node.", flush=True)
+    
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
-    if rank == 0: print(f"Group initialized? {dist.is_initialized()}", flush=True)
+    if rank == 0: 
+        print(f"Group initialized? {dist.is_initialized()}", flush=True)
+    
     local_rank = rank - gpus_per_node * (rank // gpus_per_node)
     torch.cuda.set_device(local_rank)
-
+    
     # Initialize experiment tracker
     tracker = ExperimentTracker(config)
     
@@ -165,8 +142,8 @@ def main():
     # Update num_classes in config based on dataset
     config['model']['num_classes'] = len(classes)
     
-    # Create model
-    model = AlexNet(num_classes=config['model']['num_classes']).to(local_rank)
+    # Create model with config settings
+    model = get_model(config).to(local_rank)
     model = DDP(model, device_ids=[local_rank])
 
     # Train model
@@ -174,34 +151,27 @@ def main():
         model, train_loader, val_loader, config, local_rank, tracker
     )
     
-    # Save training history and metrics
-    tracker.save_metrics(train_losses, train_accuracies, val_losses, val_accuracies)
-    tracker.plot_training_history(train_losses, train_accuracies, val_losses, val_accuracies)
-    tracker.save_model(model, classes)
-    
+    # Only save result and run test when all resources are collected back to the first GPU
     if rank == 0:
+        # Save training history and metrics
+        tracker.save_metrics(train_losses, train_accuracies, val_losses, val_accuracies)
+        tracker.plot_training_history(train_losses, train_accuracies, val_losses, val_accuracies)
+        tracker.save_model(model, classes)
+        
         # Predict on test set
         model.eval()
         predictions = []
         filenames = []
-        
         with torch.no_grad():
             for images, image_names in test_loader:
                 images = images.to(local_rank)
                 outputs = model(images)
                 _, predicted = torch.max(outputs, 1)
-                
                 predictions.extend([classes[idx] for idx in predicted.cpu().numpy()])
                 filenames.extend(image_names)
         
-        # Save predictions
-        import csv
-        predictions_path = os.path.join(tracker.experiment_dir, 'test_predictions.csv')
-        with open(predictions_path, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Image', 'Predicted Class'])
-            for fname, pred in zip(filenames, predictions):
-                writer.writerow([fname, pred])
+        # Save predictions using the tracker
+        tracker.save_predictions(filenames, predictions)
     dist.destroy_process_group()
 
 if __name__ == '__main__':
