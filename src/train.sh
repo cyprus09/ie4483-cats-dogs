@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=vgg16_pretrained_cats_dogs  # Job name
-#SBATCH --output=vgg16_pretrained_%j.txt    # Output file (%j is replaced with job ID)
+#SBATCH --job-name=alexnet_pretrained_cifar10  # Job name
+#SBATCH --output=alexnet_pretrained_%j.txt    # Output file (%j is replaced with job ID)
 #SBATCH --error=error_%j.txt      # Error file (%j is replaced with job ID)
 #SBATCH --ntasks-per-node=4                # Number of tasks (jobs)
 #SBATCH --time=03:00:00           # Maximum runtime (1 hour)
@@ -16,7 +16,7 @@ export NCCL_IB_DISABLE=1
 export NCCL_SOCKET_IFNAME=enp179s0f1
 export NCCL_P2P_DISABLE=1
 
-export MASTER_PORT=59000
+export MASTER_PORT=52000
 export WORLD_SIZE=$(($SLURM_NNODES * $SLURM_NTASKS_PER_NODE))
 echo "WORLD_SIZE="$WORLD_SIZE
 
