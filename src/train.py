@@ -1,6 +1,8 @@
 from tqdm import tqdm
 from socket import gethostname
 import os
+import random
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -13,6 +15,13 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from utils import load_config, ExperimentTracker
 from model import AlexNet, VGG16, AlexNetPretrained, VGG16Pretrained
 from dataloader import get_data_loaders
+
+def set_random_seed(seed):
+    """Set random seed for reproducibility across all libraries."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 def train_model(model, train_loader, val_loader, config, device, tracker):
     criterion = nn.CrossEntropyLoss()
@@ -116,6 +125,11 @@ def get_model(config):
 def main():
     # Load config
     config = load_config('config.yaml')
+    
+    # Set random seed if specified in config
+    if 'random_seed' in config:
+        set_random_seed(config['random_seed'])
+        print(f"Set random seed to {config['random_seed']} for reproducibility")
 
     # Setup distributed training on multinode & multi-GPU
     world_size = int(os.environ["WORLD_SIZE"])
