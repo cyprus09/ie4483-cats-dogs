@@ -1,0 +1,12 @@
+__pycache__
+experiments/
+datasets/
+image_utils/
+*.txt
+*.yaml
+*.sh
+*.pth
+*.ipynb
+*.csv
+*.png
+

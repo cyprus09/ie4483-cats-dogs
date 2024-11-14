@@ -151,30 +151,48 @@ class VGG16Pretrained(nn.Module):
         # Remove original classifier
         self.features = self.vgg16.features
         
-        # Create new classifier
+        # # Create new classifier
+        # self.classifier = nn.Sequential(
+        #     nn.Flatten(),
+        #     nn.BatchNorm1d(512 * 7 * 7),
+        #     nn.Linear(512 * 7 * 7, 256),
+        #     nn.Softplus(),
+        #     nn.BatchNorm1d(256),
+        #     nn.Dropout(0.5),
+            
+        #     nn.Linear(256, 256),
+        #     nn.Softplus(),
+        #     nn.BatchNorm1d(256),
+        #     nn.Dropout(0.5),
+            
+        #     nn.Linear(256, 256),
+        #     nn.Softplus(),
+        #     nn.BatchNorm1d(256),
+        #     nn.Dropout(0.5),
+            
+        #     nn.Linear(256, 256),
+        #     nn.Softplus(),
+        #     nn.BatchNorm1d(256),
+        #     nn.Dropout(0.5),
+            
+        #     nn.Linear(256, num_classes),
+        #     nn.Softmax(dim=1)
+        # )
+
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.BatchNorm1d(512 * 7 * 7),
-            nn.Linear(512 * 7 * 7, 256),
-            nn.Softplus(),
+            nn.Linear(512 * 7 * 7, 1024),
+            nn.ReLU(),
+            nn.BatchNorm1d(1024),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(),
             nn.BatchNorm1d(256),
             nn.Dropout(0.5),
-            
-            nn.Linear(256, 256),
-            nn.Softplus(),
-            nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
-            
-            nn.Linear(256, 256),
-            nn.Softplus(),
-            nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
-            
-            nn.Linear(256, 256),
-            nn.Softplus(),
-            nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
-            
             nn.Linear(256, num_classes),
             nn.Softmax(dim=1)
         )

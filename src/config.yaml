@@ -1,14 +1,14 @@
 # Training parameters
 training:
-  num_epochs: 25
+  num_epochs: 15
   batch_size: 64
-  learning_rate: 0.000025
-  scheduler_patience: 3
-  scheduler_factor: 0.1
+  learning_rate: 0.001
+  scheduler_patience: 5
+  scheduler_factor: 0.5
 
 # Data parameters
 data:
-  dataset: "cifar10"
+  dataset: "cats_and_dogs"
   data_dir: '../datasets/cifar10'
   train_dir: '../datasets/cats_and_dogs/train'
   val_dir: '../datasets/cats_and_dogs/val'
@@ -17,14 +17,14 @@ data:
 
 # Model parameters
 model:
-  name: 'alexnet'
+  name: 'vgg16'
   is_pretrained: true 
-  num_classes: 10 # This will be overridden based on dataset
+  num_classes: 2 # This will be overridden based on dataset
 
 # Experiment tracking
 experiment:
-  label: 'alexnet_pretrained_cifar10'
+  label: 'vgg16_pretrained_cats_and_dogs_7_no_random_seed'
   output_dir: './experiments'
   save_model: true
 
-random_seed: 24
+random_seed: 16
