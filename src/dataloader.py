@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import datasets, transforms
+from augmentation import Augmentation
 import os
 
 from dataset import UnlabeledImageDataset
@@ -24,7 +25,7 @@ def get_cats_dogs_transforms():
     return train_transform, val_transform
 
 def get_cifar10_transforms():
-    train_transform = transforms.Compose([
+    base_transform = transforms.Compose([
         transforms.Resize((227, 227)),
         transforms.RandomCrop(227, padding=4),
         transforms.RandomHorizontalFlip(),
@@ -37,6 +38,9 @@ def get_cifar10_transforms():
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     ])
+
+    # Create augmentation wrapper
+    train_transform = Augmentation(base_transform)
 
     return train_transform, val_transform
 
